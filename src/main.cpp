@@ -9,26 +9,34 @@ const uint32_t delta = 0x9e3779b9;
 
 uint32_t madryga_encrypt(uint32_t plain_text, uint32_t key)
 {
-    uint32_t v0 = plain_text, v1 = key, sum = 0;
+    uint32_t L = plain_text >> 16, R = plain_text & 0xFFFF, sum = 0;
     for (int i = 0; i < ROUNDS; i++)
     {
         sum += delta;
-        v0 += ((v1 << 4) + key) ^ (v1 + sum) ^ ((v1 >> 5) + key);
-        v1 += ((v0 << 4) + key) ^ (v0 + sum) ^ ((v0 >> 5) + key);
+        uint32_t Ki = key ^ sum;
+        uint32_t F = ((R << 7) ^ Ki) + (R >> 5);
+        uint32_t Lp = R;
+        uint32_t Rp = L ^ F;
+        L = Lp;
+        R = Rp;
     }
-    return v0;
+    return (L << 16) | R;
 }
 
 uint32_t madryga_decrypt(uint32_t cipher_text, uint32_t key)
 {
-    uint32_t v0 = cipher_text, v1 = key, sum = delta * ROUNDS;
+    uint32_t L = cipher_text >> 16, R = cipher_text & 0xFFFF, sum = delta * ROUNDS;
     for (int i = 0; i < ROUNDS; i++)
     {
-        v1 -= ((v0 << 4) + key) ^ (v0 + sum) ^ ((v0 >> 5) + key);
-        v0 -= ((v1 << 4) + key) ^ (v1 + sum) ^ ((v1 >> 5) + key);
+        uint32_t Ki = key ^ sum;
+        uint32_t F = ((L << 7) ^ Ki) + (L >> 5);
+        uint32_t Rp = R;
+        uint32_t Lp = L ^ F;
+        R = Rp;
+        L = Lp;
         sum -= delta;
     }
-    return v0;
+    return (R << 16) | L;
 }
 
 void encrypt_directory(std::string &directory_path, std::string key)
@@ -40,6 +48,12 @@ void encrypt_directory(std::string &directory_path, std::string key)
             std::string file_path = entry.path();
             std::ifstream file(file_path, std::ios::binary);
             std::vector<uint32_t> plain_text;
+
+            uint32_t buffer;
+            while (file.read(reinterpret_cast<char *>(&buffer), sizeof(buffer)))
+            {
+                plain_text.push_back(buffer);
+            }
 
             std::vector<uint32_t> cipher_text;
             for (uint32_t text_chunk : plain_text)
@@ -71,6 +85,7 @@ void decrypt_directory(std::string &directory_path, std::string key)
             std::ifstream file(file_path, std::ios::binary);
             std::vector<uint32_t> cipher_text;
             std::vector<uint32_t> plain_text;
+
             uint32_t text_chunk;
             while (file.read(reinterpret_cast<char *>(&text_chunk), sizeof(text_chunk)))
             {
@@ -92,7 +107,7 @@ void decrypt_directory(std::string &directory_path, std::string key)
     }
 }
 
-int main(char *argv[], int argc)
+int main(int argc, char **argv)
 {
     std::string directory_path, key;
     int num_rounds;
