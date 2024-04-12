@@ -44,7 +44,7 @@ void encrypt_directory(std::string &directory_path, std::string key)
             std::vector<uint32_t> cipher_text;
             for (uint32_t text_chunk : plain_text)
             {
-                cipher_text.push_back(madryga_encrypt(text_chunk, std::stoul(key, nullptr, 0), num_rounds));
+                cipher_text.push_back(madryga_encrypt(text_chunk, std::stoul(key, nullptr, 0)));
             }
 
             std::string encrypt_file_path = directory_path + ".madryga";
@@ -59,42 +59,69 @@ void encrypt_directory(std::string &directory_path, std::string key)
             encrypt_file.close();
         }
     }
+}
 
-    void decrypt_directory(std::string & directory_path, std::string key)
+void decrypt_directory(std::string &directory_path, std::string key)
+{
+    for (const auto &entry : std::filesystem::directory_iterator(directory_path))
     {
-        return;
+        if (entry.is_regular_file())
+        {
+            std::string file_path = entry.path();
+            std::ifstream file(file_path, std::ios::binary);
+            std::vector<uint32_t> cipher_text;
+            std::vector<uint32_t> plain_text;
+            uint32_t text_chunk;
+            while (file.read(reinterpret_cast<char *>(&text_chunk), sizeof(text_chunk)))
+            {
+                cipher_text.push_back(text_chunk);
+            }
+            for (uint32_t text_chunk : cipher_text)
+            {
+                plain_text.push_back(madryga_decrypt(text_chunk, std::stoul(key, nullptr, 0)));
+            }
+            std::string decrypt_file_path = file_path + ".decrypted";
+            std::ofstream decrypt_file(decrypt_file_path, std::ios::binary);
+            for (uint32_t text_chunk : plain_text)
+            {
+                decrypt_file.write(reinterpret_cast<const char *>(&text_chunk), sizeof(text_chunk));
+            }
+            file.close();
+            decrypt_file.close();
+        }
+    }
+}
+
+int main(char *argv[], int argc)
+{
+    std::string directory_path, key;
+    int num_rounds;
+
+    if (argc != 3)
+    {
+        std::cerr << "Usage: " << argv[0] << " <directory_path> <key>\n";
+        return 1;
     }
 
-    int main(char *argv[], int argc)
+    directory_path = argv[1];
+    key = argv[2];
+
+    int choice;
+    std::cout << "1. Encrypt\n2. Decrypt\n";
+    std::cin >> choice;
+
+    if (choice == 1)
     {
-        std::string directory_path, key;
-        int num_rounds;
-
-        if (argc != 3)
-        {
-            std::cerr << "Usage: " << argv[0] << " <directory_path> <key>\n";
-            return 1;
-        }
-
-        directory_path = argv[1];
-        key = argv[2];
-
-        int choice;
-        std::cout << "1. Encrypt\n2. Decrypt\n";
-        std::cin >> choice;
-
-        if (choice == 1)
-        {
-            encrypt_directory(directory_path, key);
-        }
-        else if (choice == 2)
-        {
-            decrypt_directory(directory_path, key);
-        }
-        else
-        {
-            std::cerr << "Invalid choice\n";
-        }
-
-        return 0;
+        encrypt_directory(directory_path, key);
     }
+    else if (choice == 2)
+    {
+        decrypt_directory(directory_path, key);
+    }
+    else
+    {
+        std::cerr << "Invalid choice\n";
+    }
+
+    return 0;
+}
