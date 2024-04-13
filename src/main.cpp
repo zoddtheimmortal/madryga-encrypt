@@ -216,6 +216,11 @@ void encrypt_directory(std::string &directory_path)
             std::string file_path = entry.path();
             encrypt_file(file_path);
         }
+        if (entry.is_directory())
+        {
+            std::string dir_path = entry.path();
+            encrypt_directory(dir_path);
+        }
     }
 }
 
@@ -228,6 +233,11 @@ void decrypt_directory(std::string &directory_path)
             std::string file_path = entry.path();
             std::string output_path = file_path.substr(0, file_path.size() - 8);
             decrypt_file(file_path.c_str(), output_path.c_str());
+        }
+        if (entry.is_directory())
+        {
+            std::string dir_path = entry.path();
+            decrypt_directory(dir_path);
         }
     }
 }
