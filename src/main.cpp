@@ -68,8 +68,8 @@ void madryga_encrypt(u32 *v, u32 *k)
     for (i = 0; i < ROUNDS; i++)
     {
         sum += delta;
-        v0 += ((v1 << 4) + k[0]) ^ (v1 + sum) ^ ((v1 >> 5) + k[1]);
-        v1 += ((v0 << 4) + k[2]) ^ (v0 + sum) ^ ((v0 >> 5) + k[3]);
+        v0 += ((v1 << 4) + k[0]) ^ (v1 + sum) ^ ((v1 >> 8) + k[1]);
+        v1 += ((v0 << 4) + k[2]) ^ (v0 + sum) ^ ((v0 >> 8) + k[3]);
     }
 
     v[0] = v0;
@@ -83,8 +83,8 @@ void madryga_decrypt(u32 *v, u32 *k)
 
     for (i = 0; i < ROUNDS; i++)
     {
-        v1 -= ((v0 << 4) + k[2]) ^ (v0 + sum) ^ ((v0 >> 5) + k[3]);
-        v0 -= ((v1 << 4) + k[0]) ^ (v1 + sum) ^ ((v1 >> 5) + k[1]);
+        v1 -= ((v0 << 4) + k[2]) ^ (v0 + sum) ^ ((v0 >> 8) + k[3]);
+        v0 -= ((v1 << 4) + k[0]) ^ (v1 + sum) ^ ((v1 >> 8) + k[1]);
         sum -= delta;
     }
 
@@ -240,6 +240,10 @@ void decrypt_directory(std::string &directory_path)
             decrypt_directory(dir_path);
         }
     }
+    // std::string output_file_path = directory_path + "/madryga.txt";
+    // std::ofstream outfile(output_file_path);
+    // outfile << "with love, madryga <3" << std::endl;
+    // outfile.close();
 }
 
 int main(int argc, char **argv)
